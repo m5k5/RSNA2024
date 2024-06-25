@@ -1,6 +1,11 @@
 from torchmetrics import Metric
 from torchmetrics.classification import MulticlassConfusionMatrix
 import torch
+import pydicom
+import numpy as np
+from PIL import Image
+
+eps=1e-12
 
 class BalancedAccuracy(Metric):
     def __init__(self, numClasses, **kwargs):
@@ -42,3 +47,33 @@ class FocalLoss(torch.nn.Module):
         focal_loss = self.alpha * (1-CEExp)**self.gamma * CE
                        
         return focal_loss.mean()
+    
+def dicomToArray(path, IMG_SIZE):
+    dicom = pydicom.read_file(path)
+    data = pydicom.pixel_data_handlers.util.apply_modality_lut(dicom.pixel_array, dicom)
+    data = pydicom.pixel_data_handlers.util.apply_windowing(data, dicom)
+    # data = dicom.pixel_array
+    if dicom.PhotometricInterpretation == "MONOCHROME1":
+        data = np.amax(data) - data
+        
+    w, h = data.shape[0], data.shape[1]
+
+    #Center crop
+    if w>h:
+        diff = w-h
+        data = data[diff//2:diff//2+h, :]
+    if h>w:
+        diff = h-w
+        data = data[:, diff//2:diff//2+w]
+
+    data = data - np.min(data)
+    data = data * 1.0/(np.max(data)+eps)
+
+    w, h = data.shape[0], data.shape[1]
+
+    # resize
+    if not (w == IMG_SIZE[0] and h == IMG_SIZE[1]):
+        data = np.array(Image.fromarray((data * 255).astype(np.uint8), mode="L").resize(IMG_SIZE))
+
+    # data = (data * 255).astype(np.uint8)
+    return data
