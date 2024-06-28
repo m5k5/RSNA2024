@@ -27,10 +27,12 @@ class BalancedAccuracy(Metric):
     
 
 class FocalLoss(torch.nn.Module):
-    def __init__(self, alpha=0.8, gamma=2):
+    def __init__(self, alpha=0.8, gamma=2, labelSmoothing=0.0, weights=None):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
+        self.labelSmoothing = labelSmoothing
+        self.weights = weights
 
     def forward(self, inputs, targets ):
         
@@ -42,7 +44,7 @@ class FocalLoss(torch.nn.Module):
         # targets = targets.view(-1)
         
         #compute cross-entropy 
-        CE = torch.nn.functional.cross_entropy(inputs, targets, reduction="none")
+        CE = torch.nn.functional.cross_entropy(inputs, targets, reduction="none", weight=self.weights, label_smoothing=self.labelSmoothing)
         CEExp = torch.exp(-CE)
         focal_loss = self.alpha * (1-CEExp)**self.gamma * CE
                        
