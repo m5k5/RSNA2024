@@ -76,6 +76,8 @@ def dicomToArray(path, IMG_SIZE):
     # resize
     if not (w == IMG_SIZE[0] and h == IMG_SIZE[1]):
         data = np.array(Image.fromarray((data * 255).astype(np.uint8), mode="L").resize(IMG_SIZE))
+    else:
+        data = (data * 255).astype(np.uint8)
 
     # data = (data * 255).astype(np.uint8)
     return data
