@@ -1,0 +1,14 @@
+name: ml
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.12
+  - numpy
+  - pandas
+  - pytorch
+  - matplotlib
+  - pillow
+  - tqdm
+
