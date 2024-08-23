@@ -4,6 +4,7 @@ import torch
 import pydicom
 import numpy as np
 from PIL import Image
+import glob, re, os
 
 eps=1e-12
 
@@ -81,3 +82,46 @@ def dicomToArray(path, IMG_SIZE):
 
     # data = (data * 255).astype(np.uint8)
     return data
+
+
+def loadSampledData(studyId, imCount, uniqueSeriesDescr, dfDescr, IMG_SIZE, DEBUG, DATA_PATH ):
+    imData = np.zeros((imCount*uniqueSeriesDescr.shape[0], *IMG_SIZE), dtype=np.uint8)
+    for typeIdx, studyType in enumerate(uniqueSeriesDescr):
+        try:
+            seriesId = dfDescr.loc[(studyId, studyType)]["series_id"].to_numpy()
+            seriesId = seriesId[0]
+        except AttributeError:
+            seriesId = dfDescr.loc[(studyId, studyType)]["series_id"]
+        except KeyError:
+            print(f"Not all relevant series types are present for {studyId=} ... skipping")
+            continue
+            
+        if DEBUG:
+            allFilesInDir = glob.glob(os.path.join(DATA_PATH, f"train_images/{studyId}/{seriesId}/*.dcm"))
+        else:
+            allFilesInDir = glob.glob(os.path.join(DATA_PATH, f"test_images/{studyId}/{seriesId}/*.dcm"))
+        #Sort by filename number
+        allFilesInDir = sorted(allFilesInDir, key=lambda x:int(re.findall(r"\d+\.dcm", x)[0].replace(".dcm", "")))
+        mult = len(allFilesInDir)/imCount
+
+        if mult <= 1:
+            for idx, _ in enumerate(allFilesInDir):
+                instance = idx
+                f = allFilesInDir[instance]
+                imData[typeIdx*imCount + idx] = dicomToArray(f, IMG_SIZE)
+        elif mult > 1 and mult < 2.5:
+            diff = len(allFilesInDir) - imCount
+            for idx in range(imCount):
+                instance = diff//2+idx
+                f = allFilesInDir[instance]
+                imData[typeIdx*imCount + idx] = dicomToArray(f, IMG_SIZE)
+        elif mult >= 2.5:
+            stepsSize = np.floor(mult)-1
+            stepCount = stepsSize*imCount
+            diff = len(allFilesInDir) - stepCount
+            for idx in range(imCount):
+                instance = int(diff//2+idx*stepsSize)
+                f = allFilesInDir[instance]
+                imData[typeIdx*imCount + idx] = dicomToArray(f, IMG_SIZE)
+        
+    return imData
