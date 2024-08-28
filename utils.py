@@ -51,7 +51,7 @@ class FocalLoss(torch.nn.Module):
                        
         return focal_loss.mean()
     
-def dicomToArray(path, IMG_SIZE):
+def dicomToArray(path, IMG_SIZE, skipResize=False):
     dicom = pydicom.read_file(path)
     data = pydicom.pixel_data_handlers.util.apply_modality_lut(dicom.pixel_array, dicom)
     data = pydicom.pixel_data_handlers.util.apply_windowing(data, dicom)
@@ -75,7 +75,7 @@ def dicomToArray(path, IMG_SIZE):
     w, h = data.shape[0], data.shape[1]
 
     # resize
-    if not (w == IMG_SIZE[0] and h == IMG_SIZE[1]):
+    if not (w == IMG_SIZE[0] and h == IMG_SIZE[1]) and not skipResize:
         data = np.array(Image.fromarray((data * 255).astype(np.uint8), mode="L").resize(IMG_SIZE))
     else:
         data = (data * 255).astype(np.uint8)
@@ -125,3 +125,49 @@ def loadSampledData(studyId, imCount, uniqueSeriesDescr, dfDescr, IMG_SIZE, DEBU
                 imData[typeIdx*imCount + idx] = dicomToArray(f, IMG_SIZE)
         
     return imData
+
+
+def loadSampledDataSingle(studyId, seriesId, imCount, IMG_SIZE, DATA_PATH, USE_TEST=False ):
+    imData = np.zeros((imCount, *IMG_SIZE), dtype=np.uint8)
+    if USE_TEST:
+        allFilesInDir = glob.glob(os.path.join(DATA_PATH, f"test_images/{studyId}/{seriesId}/*.dcm"))
+    else:
+        allFilesInDir = glob.glob(os.path.join(DATA_PATH, f"train_images/{studyId}/{seriesId}/*.dcm"))
+    #Sort by filename number
+    allFilesInDir = sorted(allFilesInDir, key=lambda x:int(re.findall(r"\d+\.dcm", x)[0].replace(".dcm", "")))
+    if len(allFilesInDir)==0:
+        print(f"No image data found for {studyId=} {seriesId=}")
+        return imData
+    mult = len(allFilesInDir)/imCount
+
+    if mult <= 1:
+        for idx, _ in enumerate(allFilesInDir):
+            instance = idx
+            f = allFilesInDir[instance]
+            imData[idx] = dicomToArray(f, IMG_SIZE)
+    elif mult > 1 and mult < 2.5:
+        diff = len(allFilesInDir) - imCount
+        for idx in range(imCount):
+            instance = diff//2+idx
+            f = allFilesInDir[instance]
+            imData[idx] = dicomToArray(f, IMG_SIZE)
+    elif mult >= 2.5:
+        stepsSize = np.floor(mult)-1
+        stepCount = stepsSize*imCount
+        diff = len(allFilesInDir) - stepCount
+        for idx in range(imCount):
+            instance = int(diff//2+idx*stepsSize)
+            f = allFilesInDir[instance]
+            imData[idx] = dicomToArray(f, IMG_SIZE)
+        
+    return imData
+
+
+def multiOutputToBinary(labelVec, newLength, numClasses):
+    binYTrain=[]
+    for y in labelVec:
+        yNew = np.zeros(newLength)
+        for idx,label in enumerate(y):
+            yNew[idx*numClasses+label] = 1
+        binYTrain.append(yNew)
+    return np.array(binYTrain)
