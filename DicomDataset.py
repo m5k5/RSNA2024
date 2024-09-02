@@ -76,14 +76,14 @@ class PatientData:
         for orientationType, folder in scanMapping:
             self.scans.append(Scan(folder, orientationType))
 
-    def getAxialScans(self):
+    def getAxialScans(self) -> list[Scan]:
         axialScans = []
         for s in self.scans:
             if s.orientationType==OrientationType.Axial:
                 axialScans.append(s)
         return axialScans
     
-    def getSagittalScans(self):
+    def getSagittalScans(self) -> list[Scan]:
         sagScans = []
         for s in self.scans:
             if s.orientationType==OrientationType.Sagittal:
