@@ -105,7 +105,8 @@ class PatientData:
         return scan.slices[minIdx]
     
     def getSlicesInRangeDirection(self, scan:Scan, minPos, maxPos, direction:Direction):
-        positions = [s.position for s in scan.slices]
+        # Center positions of all slices
+        positions = [s.getWorldPosition(s.data.shape[0]//2,s.data.shape[1]//2) for s in scan.slices]
         foundSlices=[]
         if minPos[direction.value] >= maxPos[direction.value]:
             raise ValueError(f"minPos ({minPos}) has to be smaller than maxPos{maxPos} in the specified direction {direction}")
