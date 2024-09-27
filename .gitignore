@@ -162,7 +162,5 @@ cython_debug/
 *.code-workspace
 *.pt
 valPlots/
-logs/
-logsOld/
-logsMultiStage/
-logsVertebraeDet/
+
+logs*/
