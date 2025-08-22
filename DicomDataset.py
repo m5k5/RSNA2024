@@ -55,9 +55,9 @@ class Scan:
         allFilesInDir = sorted(allFilesInDir, key=lambda x:int(re.findall(r"\d+\.dcm", x)[0].replace(".dcm", "")))
         self.slices=[]
         for f in allFilesInDir:
-            dicom = pydicom.read_file(f)
-            data = pydicom.pixel_data_handlers.util.apply_modality_lut(dicom.pixel_array, dicom)
-            data = pydicom.pixel_data_handlers.util.apply_windowing(data, dicom)
+            dicom = pydicom.dcmread(f)
+            data = pydicom.pixels.apply_modality_lut(dicom.pixel_array, dicom)
+            data = pydicom.pixels.apply_windowing(data, dicom)
             data = data - np.min(data)
             data = data * 255.0/(np.max(data)+eps)
             seriesDescr = dicom.SeriesDescription
